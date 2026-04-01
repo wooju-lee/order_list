@@ -108,7 +108,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-56 bg-card flex flex-col shrink-0">
+    <aside className="w-48 bg-card flex flex-col shrink-0">
       {/* Sidebar Header */}
       <div className="flex items-center justify-between h-11 px-3 border-b border-border">
         <div className="flex items-center gap-2">
