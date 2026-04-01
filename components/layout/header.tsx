@@ -11,9 +11,7 @@ import {
 
 export function Header() {
   return (
-    <header className="flex items-center justify-between h-11 px-5 bg-card border-b border-border">
-      <span className="text-sm font-bold tracking-tight">IIC_BO</span>
-
+    <header className="flex items-center justify-end h-11 px-5 bg-card border-b border-border">
       <div className="flex items-center gap-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

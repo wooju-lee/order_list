@@ -36,14 +36,12 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { orderRecords, orderDetails } from "@/lib/mock-data"
+import { orderRecords } from "@/lib/mock-data"
 
-interface OrderListProps {
-  onSelectOrder: (id: string) => void
-}
+interface OrderListProps {}
 
 type QuickDate = "today" | "week" | "month" | "3months"
-type SortField = "orderDate" | "requestDate"
+type SortField = "orderDate" | "orderNo" | "qty" | "store" | "location" | "unitPrice" | "totalAmount"
 type SortDirection = "asc" | "desc"
 
 const BP_OPTIONS = [
@@ -78,11 +76,9 @@ const ORDER_TYPE_OPTIONS = [
 const STATUS_OPTIONS = [
   { value: "Pending", label: "Pending" },
   { value: "Confirmed", label: "Confirmed" },
-  { value: "Processing", label: "Processing" },
-  { value: "Shipped", label: "Shipped" },
-  { value: "Delivered", label: "Delivered" },
+  { value: "Fulfilled", label: "Fulfilled" },
+  { value: "Completed", label: "Completed" },
   { value: "Canceled", label: "Canceled" },
-  { value: "Returned", label: "Returned" },
 ]
 
 const formatDate = (date: Date) => date.toISOString().split("T")[0]
@@ -151,7 +147,7 @@ function MultiSelectPopover({
   )
 }
 
-export function OrderList({ onSelectOrder }: OrderListProps) {
+export function OrderList() {
   const [quickDate, setQuickDate] = useState<QuickDate | null>(null)
   const [startDate, setStartDate] = useState(formatDate(thirtyDaysAgo))
   const [endDate, setEndDate] = useState(formatDate(today))
@@ -188,11 +184,41 @@ export function OrderList({ onSelectOrder }: OrderListProps) {
 
   const [sortField, setSortField] = useState<SortField>("orderDate")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
+  const [searchText, setSearchText] = useState("")
 
+  // Filter input states (not yet applied)
   const [selectedBP, setSelectedBP] = useState<string>("")
   const [selectedStores, setSelectedStores] = useState<string[]>([])
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
+  const [selectedCurrency, setSelectedCurrency] = useState<string>("all")
+
+  // Applied filter states (applied on Search click)
+  const [appliedFilters, setAppliedFilters] = useState({
+    bp: "",
+    stores: [] as string[],
+    statuses: [] as string[],
+    currency: "all",
+    startDate: formatDate(thirtyDaysAgo),
+    endDate: formatDate(today),
+    searchText: "",
+  })
+
+  const handleSearch = () => {
+    setAppliedFilters({
+      bp: selectedBP,
+      stores: selectedStores,
+      statuses: selectedStatuses,
+      currency: selectedCurrency,
+      startDate,
+      endDate,
+      searchText,
+    })
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") handleSearch()
+  }
 
   const currentStoreOptions = selectedBP ? (STORE_OPTIONS_BY_BP[selectedBP] ?? []) : []
 
@@ -231,31 +257,20 @@ export function OrderList({ onSelectOrder }: OrderListProps) {
     const rows: Record<string, string | number>[] = []
 
     sortedRecords.forEach((record) => {
-      const detail = orderDetails[record.id]
-      if (detail) {
-        detail.items.forEach((item) => {
-          rows.push({
-            "Order Date": record.orderDate,
-            "Status": record.orderStatus,
-            "Order Type": record.orderType,
-            "Order No.": record.orderNo,
-            "Store": `${record.storeCode} / ${record.storeName}`,
-            "Customer": record.customerName,
-            "Payment": record.paymentMethod,
-            "Shipping": record.shippingMethod,
-            "Created By": record.createdBy,
-            "Item Code": item.itemCode,
-            "Item Name": item.itemName,
-            "Category": item.category,
-            "Subcategory": item.subcategory,
-            "Color": item.color,
-            "Size": item.size,
-            "Qty": item.quantity,
-            "Unit Price": item.unitPrice,
-            "Total Price": item.totalPrice,
-          })
+      record.products.forEach((product) => {
+        rows.push({
+          "Order Date": record.orderDate,
+          "Status": record.orderStatus,
+          "Order No.": record.orderNo,
+          "Store": `${record.storeCode} / ${record.storeName}`,
+          "Location": `${record.locationCode} / ${record.locationName}`,
+          "Product Info": `${product.productCode} / ${product.productName}`,
+          "Qty": product.qty,
+          "Currency": record.currency,
+          "Unit Price": product.unitPrice,
+          "Total Amount": product.qty * product.unitPrice,
         })
-      }
+      })
     })
 
     const ws = XLSX.utils.json_to_sheet(rows)
@@ -264,16 +279,68 @@ export function OrderList({ onSelectOrder }: OrderListProps) {
     XLSX.writeFile(wb, `orders_${new Date().toISOString().split("T")[0]}.xlsx`)
   }
 
-  const sortedRecords = [...orderRecords].sort((a, b) => {
+  const filteredRecords = orderRecords.filter((record) => {
+    // BP filter
+    if (appliedFilters.bp && record.bpCode !== appliedFilters.bp) return false
+
+    // Store filter
+    if (appliedFilters.stores.length > 0 && !appliedFilters.stores.includes(record.storeCode)) return false
+
+    // Status filter
+    if (appliedFilters.statuses.length > 0 && !appliedFilters.statuses.includes(record.orderStatus)) return false
+
+    // Currency filter
+    if (appliedFilters.currency !== "all" && record.currency !== appliedFilters.currency) return false
+
+    // Date range filter
+    const recordDate = record.orderDate.split(" ")[0]
+    if (appliedFilters.startDate && recordDate < appliedFilters.startDate) return false
+    if (appliedFilters.endDate && recordDate > appliedFilters.endDate) return false
+
+    // Text search filter
+    if (appliedFilters.searchText.length >= 2) {
+      const q = appliedFilters.searchText.toLowerCase()
+      const match =
+        record.orderNo.toLowerCase().includes(q) ||
+        record.storeCode.toLowerCase().includes(q) ||
+        record.storeName.toLowerCase().includes(q)
+      if (!match) return false
+    }
+
+    return true
+  })
+
+  const getOrderTotal = (r: typeof filteredRecords[0]) =>
+    r.products.reduce((s, p) => s + p.qty * p.unitPrice, 0)
+  const getOrderQty = (r: typeof filteredRecords[0]) =>
+    r.products.reduce((s, p) => s + p.qty, 0)
+  const getFirstUnitPrice = (r: typeof filteredRecords[0]) =>
+    r.products[0]?.unitPrice ?? 0
+
+  const sortedRecords = [...filteredRecords].sort((a, b) => {
     let comparison = 0
-    if (sortField === "orderDate") {
-      comparison =
-        new Date(a.orderDate.split(" ")[0]).getTime() -
-        new Date(b.orderDate.split(" ")[0]).getTime()
-    } else {
-      comparison =
-        new Date(a.requestDate.split(" ")[0]).getTime() -
-        new Date(b.requestDate.split(" ")[0]).getTime()
+    switch (sortField) {
+      case "orderDate":
+        comparison = new Date(a.orderDate.split(" ")[0]).getTime() - new Date(b.orderDate.split(" ")[0]).getTime()
+        break
+      case "orderNo":
+        comparison = a.orderNo.localeCompare(b.orderNo)
+        break
+      case "qty":
+        comparison = getOrderQty(a) - getOrderQty(b)
+        break
+      case "store":
+        comparison = a.storeCode.localeCompare(b.storeCode)
+        break
+      case "location":
+        comparison = a.locationCode.localeCompare(b.locationCode)
+        break
+      case "unitPrice":
+        comparison = getFirstUnitPrice(a) - getFirstUnitPrice(b)
+        break
+      case "totalAmount":
+        comparison = getOrderTotal(a) - getOrderTotal(b)
+        break
     }
     return sortDirection === "asc" ? comparison : -comparison
   })
@@ -282,9 +349,7 @@ export function OrderList({ onSelectOrder }: OrderListProps) {
     <div className="space-y-4">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-[10px]">
-        <span className="text-muted-foreground">Inventory</span>
-        <ChevronRight className="h-3 w-3 text-muted-foreground" />
-        <span className="text-muted-foreground">Order Management</span>
+        <span className="text-muted-foreground">Order</span>
         <ChevronRight className="h-3 w-3 text-muted-foreground" />
         <span className="text-primary font-medium">Order List</span>
       </nav>
@@ -293,7 +358,7 @@ export function OrderList({ onSelectOrder }: OrderListProps) {
       <div>
         <h1 className="text-lg font-extrabold">Order List</h1>
         <p className="text-[10px] text-muted-foreground mt-0.5">
-          Search and manage customer orders by store and status.
+          View and search all online and offline order information.
         </p>
       </div>
 
@@ -330,17 +395,6 @@ export function OrderList({ onSelectOrder }: OrderListProps) {
             />
           </div>
 
-          {/* Order Type */}
-          <div className="w-[160px]">
-            <MultiSelectPopover
-              label="Order Type"
-              options={ORDER_TYPE_OPTIONS}
-              selected={selectedTypes}
-              onToggle={(v) => setSelectedTypes(toggleInList(selectedTypes, v))}
-              onToggleAll={() => setSelectedTypes(toggleAll(selectedTypes, ORDER_TYPE_OPTIONS))}
-            />
-          </div>
-
           {/* Order Status */}
           <div className="w-[160px]">
             <MultiSelectPopover
@@ -350,6 +404,22 @@ export function OrderList({ onSelectOrder }: OrderListProps) {
               onToggle={(v) => setSelectedStatuses(toggleInList(selectedStatuses, v))}
               onToggleAll={() => setSelectedStatuses(toggleAll(selectedStatuses, STATUS_OPTIONS))}
             />
+          </div>
+
+          {/* Currency */}
+          <div className="w-[160px]">
+            <label className="block text-[10px] font-medium text-foreground mb-1.5">Currency</label>
+            <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
+              <SelectTrigger className="w-full bg-background border-border !h-8 text-[10px]">
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-[10px]">All</SelectItem>
+                <SelectItem value="USD" className="text-[10px]">USD</SelectItem>
+                <SelectItem value="CAD" className="text-[10px]">CAD</SelectItem>
+                <SelectItem value="JPY" className="text-[10px]">JPY</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -404,19 +474,142 @@ export function OrderList({ onSelectOrder }: OrderListProps) {
         <div className="flex items-end justify-between gap-3">
           <div className="flex-1">
             <label className="block text-[10px] text-muted-foreground mb-1">
-              Order No., Store Code, Store Name, Customer Name
+              Order No., Store Code, Store Name
             </label>
             <Input
               placeholder="Enter at least 2 characters"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              onKeyDown={handleKeyDown}
               className="bg-background border-border h-7 !text-[10px] placeholder:text-[10px]"
             />
           </div>
-          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 px-4 h-7 text-[10px]">
+          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 px-4 h-7 text-[10px]" onClick={handleSearch}>
             <Search className="h-3.5 w-3.5" />
             Search
           </Button>
         </div>
       </div>
+
+      {/* Summary Stats */}
+      {(() => {
+        const currencyActive = appliedFilters.currency !== "all"
+        const cur = appliedFilters.currency
+        const fmtVal = (v: number | null) => {
+          if (v === null) return "-"
+          if (cur === "JPY") return v.toLocaleString()
+          return v % 1 === 0 ? v.toLocaleString() : v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        }
+        const calcNet = (amount: number) => Math.round(amount / 1.1 * 100) / 100
+
+        // Sales = non-Canceled orders
+        const salesRecords = sortedRecords.filter((r) => r.orderStatus !== "Canceled")
+        const salesQty = currencyActive ? salesRecords.reduce((sum, r) => sum + r.products.reduce((s, p) => s + p.qty, 0), 0) : null
+        const salesAmount = currencyActive ? salesRecords.reduce((sum, r) => sum + r.products.reduce((s, p) => s + p.qty * p.unitPrice, 0), 0) : null
+        const salesNet = salesAmount !== null ? calcNet(salesAmount) : null
+        const salesVat = salesAmount !== null && salesNet !== null ? Math.round((salesAmount - salesNet) * 100) / 100 : null
+
+        // Return = Canceled orders
+        const returnRecords = sortedRecords.filter((r) => r.orderStatus === "Canceled")
+        const returnQty = currencyActive ? returnRecords.reduce((sum, r) => sum + r.products.reduce((s, p) => s + p.qty, 0), 0) : null
+        const returnAmount = currencyActive ? returnRecords.reduce((sum, r) => sum + r.products.reduce((s, p) => s + p.qty * p.unitPrice, 0), 0) : null
+        const returnNet = returnAmount !== null ? calcNet(returnAmount) : null
+        const returnVat = returnAmount !== null && returnNet !== null ? Math.round((returnAmount - returnNet) * 100) / 100 : null
+
+        // Grand total
+        const totalQty = salesQty !== null && returnQty !== null ? salesQty + returnQty : null
+        const totalAmount = salesAmount !== null && returnAmount !== null ? salesAmount + returnAmount : null
+        const netSales = salesNet !== null && returnNet !== null ? Math.round((salesNet - returnNet) * 100) / 100 : null
+        const vat = salesVat !== null && returnVat !== null ? Math.round((salesVat - returnVat) * 100) / 100 : null
+
+        return (
+          <div className="bg-card rounded-xl border border-border p-4">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-3">
+              <h2 className="text-sm font-extrabold">Total Sum</h2>
+              <span className="text-[9px] text-primary flex items-center gap-1">
+                * Select a currency filter to view summary data.
+              </span>
+            </div>
+
+            {/* Grand Total Row */}
+            <div className="grid grid-cols-5 gap-2 mb-3">
+              <div className="bg-[oklch(0.96_0.03_170)] rounded-lg px-3 py-2 border border-[oklch(0.92_0.04_170)]">
+                <p className="text-[8px] uppercase tracking-wider text-muted-foreground font-medium">Total Qty</p>
+                <p className="text-base font-extrabold mt-0.5 text-right">{totalQty !== null ? totalQty.toLocaleString() : "-"}</p>
+              </div>
+              <div className="col-span-2 bg-[oklch(0.96_0.03_170)] rounded-lg px-3 py-2 border border-[oklch(0.92_0.04_170)]">
+                <p className="text-[8px] uppercase tracking-wider text-muted-foreground font-medium">Total Amount</p>
+                <p className="text-base font-extrabold mt-0.5 text-right">{fmtVal(totalAmount)}</p>
+              </div>
+              <div className="bg-muted/60 rounded-lg px-3 py-2">
+                <p className="text-[8px] uppercase tracking-wider text-muted-foreground font-medium">Net Sales</p>
+                <p className="text-xs font-bold mt-0.5 text-right">{fmtVal(netSales)}</p>
+              </div>
+              <div className="bg-muted/60 rounded-lg px-3 py-2">
+                <p className="text-[8px] uppercase tracking-wider text-muted-foreground font-medium">VAT</p>
+                <p className="text-xs font-bold mt-0.5 text-right">{fmtVal(vat)}</p>
+              </div>
+            </div>
+
+            {/* Sales & Return Row */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Sales */}
+              <div className="border border-border rounded-lg p-2.5">
+                <h3 className="text-[10px] font-extrabold mb-2 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />
+                  Sales Total
+                </h3>
+                <div className="grid grid-cols-4 gap-1.5">
+                  <div className="bg-muted/40 rounded-md px-2 py-1.5">
+                    <p className="text-[8px] text-muted-foreground">Qty</p>
+                    <p className="text-[11px] font-bold text-right">{salesQty !== null ? salesQty.toLocaleString() : "-"}</p>
+                  </div>
+                  <div className="bg-muted/40 rounded-md px-2 py-1.5">
+                    <p className="text-[8px] text-muted-foreground">Amount</p>
+                    <p className="text-[11px] font-bold text-right">{fmtVal(salesAmount)}</p>
+                  </div>
+                  <div className="bg-muted/40 rounded-md px-2 py-1.5">
+                    <p className="text-[8px] text-muted-foreground">Net Sales</p>
+                    <p className="text-[11px] font-bold text-right">{fmtVal(salesNet)}</p>
+                  </div>
+                  <div className="bg-muted/40 rounded-md px-2 py-1.5">
+                    <p className="text-[8px] text-muted-foreground">VAT</p>
+                    <p className="text-[11px] font-bold text-right">{fmtVal(salesVat)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Return */}
+              <div className="border border-border rounded-lg p-2.5">
+                <h3 className="text-[10px] font-extrabold mb-2 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-destructive inline-block" />
+                  Return Total
+                  {currencyActive && <span className="text-[8px] font-normal text-muted-foreground">(Canceled orders)</span>}
+                </h3>
+                <div className="grid grid-cols-4 gap-1.5">
+                  <div className="bg-muted/40 rounded-md px-2 py-1.5">
+                    <p className="text-[8px] text-muted-foreground">Qty</p>
+                    <p className="text-[11px] font-bold text-right">{returnQty !== null ? returnQty.toLocaleString() : "-"}</p>
+                  </div>
+                  <div className="bg-muted/40 rounded-md px-2 py-1.5">
+                    <p className="text-[8px] text-muted-foreground">Amount</p>
+                    <p className="text-[11px] font-bold text-right">{fmtVal(returnAmount)}</p>
+                  </div>
+                  <div className="bg-muted/40 rounded-md px-2 py-1.5">
+                    <p className="text-[8px] text-muted-foreground">Net Sales</p>
+                    <p className="text-[11px] font-bold text-right">{fmtVal(returnNet)}</p>
+                  </div>
+                  <div className="bg-muted/40 rounded-md px-2 py-1.5">
+                    <p className="text-[8px] text-muted-foreground">VAT</p>
+                    <p className="text-[11px] font-bold text-right">{fmtVal(returnVat)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Table Card */}
       <div className="bg-card rounded-lg border border-border">
@@ -424,7 +617,7 @@ export function OrderList({ onSelectOrder }: OrderListProps) {
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] text-muted-foreground">Total</span>
-            <span className="text-[10px] font-bold">{orderRecords.length}</span>
+            <span className="text-[10px] font-bold">{sortedRecords.length}</span>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" className="gap-1.5 border-border bg-background hover:bg-muted h-7 text-[10px] px-3" onClick={handleExcelDownload}>
@@ -448,88 +641,124 @@ export function OrderList({ onSelectOrder }: OrderListProps) {
                 </button>
               </TableHead>
               <TableHead className="text-center">Status</TableHead>
-              <TableHead className="text-center">Order Type</TableHead>
-              <TableHead className="text-center">Order No.</TableHead>
+              <TableHead className="text-center">
+                <button
+                  onClick={() => handleSort("orderNo")}
+                  className="flex items-center justify-center w-full hover:text-primary transition-colors"
+                >
+                  Order No. #
+                  {getSortIcon("orderNo")}
+                </button>
+              </TableHead>
               <TableHead>
-                Store
+                <button
+                  onClick={() => handleSort("store")}
+                  className="flex items-center w-full hover:text-primary transition-colors"
+                >
+                  Store
+                  {getSortIcon("store")}
+                </button>
+                <span className="text-[10px] text-muted-foreground">(Code / Name)</span>
+              </TableHead>
+              <TableHead>
+                <button
+                  onClick={() => handleSort("location")}
+                  className="flex items-center w-full hover:text-primary transition-colors"
+                >
+                  Location
+                  {getSortIcon("location")}
+                </button>
+                <span className="text-[10px] text-muted-foreground">(Code / Name)</span>
+              </TableHead>
+              <TableHead>
+                Product Info
                 <br />
                 <span className="text-[10px] text-muted-foreground">(Code / Name)</span>
               </TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead className="text-center">Items</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-              <TableHead className="text-center">Payment</TableHead>
-              <TableHead className="text-center">Shipping</TableHead>
-              <TableHead className="text-center">Created By</TableHead>
+              <TableHead className="text-center px-4">
+                <button
+                  onClick={() => handleSort("qty")}
+                  className="flex items-center justify-center w-full hover:text-primary transition-colors"
+                >
+                  Qty
+                  {getSortIcon("qty")}
+                </button>
+              </TableHead>
+              <TableHead className="text-center px-4">Currency</TableHead>
+              <TableHead className="text-right px-4">
+                <button
+                  onClick={() => handleSort("unitPrice")}
+                  className="flex items-center justify-end w-full hover:text-primary transition-colors"
+                >
+                  Unit Price
+                  {getSortIcon("unitPrice")}
+                </button>
+              </TableHead>
+              <TableHead className="text-right px-4 pr-6">
+                <button
+                  onClick={() => handleSort("totalAmount")}
+                  className="flex items-center justify-end w-full hover:text-primary transition-colors"
+                >
+                  Total Amount
+                  {getSortIcon("totalAmount")}
+                </button>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedRecords.map((record) => (
-              <TableRow
-                key={record.id}
-                className="cursor-pointer hover:bg-muted/50 h-10"
-                onClick={() => onSelectOrder(record.id)}
-              >
-                <TableCell className="text-center text-[10px]">{record.orderDate}</TableCell>
-                <TableCell className="text-center">
-                  {(() => {
-                    const statusStyles: Record<string, string> = {
-                      "Pending": "bg-[oklch(0.93_0.05_55)] text-[oklch(0.42_0.09_50)] border-[oklch(0.86_0.06_55)]",
-                      "Confirmed": "bg-[oklch(0.94_0.04_85)] text-[oklch(0.45_0.08_75)] border-[oklch(0.88_0.05_85)]",
-                      "Processing": "bg-[oklch(0.93_0.04_210)] text-[oklch(0.38_0.07_205)] border-[oklch(0.85_0.05_210)]",
-                      "Shipped": "bg-[oklch(0.93_0.04_160)] text-[oklch(0.40_0.07_155)] border-[oklch(0.86_0.05_160)]",
-                      "Delivered": "bg-[oklch(0.92_0.04_145)] text-[oklch(0.38_0.08_140)] border-[oklch(0.85_0.05_145)]",
-                      "Canceled": "bg-[oklch(0.95_0.01_0)] text-[oklch(0.48_0.02_0)] border-[oklch(0.88_0.015_0)]",
-                      "Returned": "bg-[oklch(0.94_0.04_25)] text-[oklch(0.45_0.09_20)] border-[oklch(0.87_0.05_25)]",
-                    }
-                    return (
-                      <Badge
-                        variant="outline"
-                        className={`px-2 py-0.5 text-[10px] font-medium ${statusStyles[record.orderStatus] || ""}`}
-                      >
-                        {record.orderStatus}
-                      </Badge>
-                    )
-                  })()}
-                </TableCell>
-                <TableCell className="text-center text-[10px]">
-                  <Badge
-                    variant="outline"
-                    className={`text-[10px] px-2 py-0.5 ${
-                      record.orderType === "RX"
-                        ? "bg-[oklch(0.93_0.04_210)] text-[oklch(0.40_0.07_205)] border-[oklch(0.86_0.05_210)]"
-                        : record.orderType === "Pre-Order"
-                        ? "bg-[oklch(0.93_0.04_160)] text-[oklch(0.40_0.07_155)] border-[oklch(0.86_0.05_160)]"
-                        : "bg-[oklch(0.93_0.05_55)] text-[oklch(0.42_0.09_50)] border-[oklch(0.86_0.06_55)]"
-                    }`}
-                  >
-                    {record.orderType}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-center">
-                  <span className="text-primary font-medium underline cursor-pointer text-[10px]">
-                    {record.orderNo}
-                  </span>
-                </TableCell>
-                <TableCell className="text-[10px]">
-                  {record.storeCode} / {record.storeName}
-                </TableCell>
-                <TableCell className="text-[10px]">{record.customerName}</TableCell>
-                <TableCell className="text-center text-[10px] font-medium">
-                  {record.itemCount}
-                </TableCell>
-                <TableCell className="text-right text-[10px] font-medium">
-                  {record.currency === "JPY"
-                    ? `¥${record.totalAmount.toLocaleString()}`
-                    : record.currency === "CAD"
-                    ? `C$${record.totalAmount.toFixed(2)}`
-                    : `$${record.totalAmount.toFixed(2)}`}
-                </TableCell>
-                <TableCell className="text-center text-[10px]">{record.paymentMethod}</TableCell>
-                <TableCell className="text-center text-[10px]">{record.shippingMethod}</TableCell>
-                <TableCell className="text-center text-[10px]">{record.createdBy}</TableCell>
-              </TableRow>
-            ))}
+            {sortedRecords.map((record) => {
+              const statusStyles: Record<string, string> = {
+                "Pending": "bg-[oklch(0.93_0.05_55)] text-[oklch(0.42_0.09_50)] border-[oklch(0.86_0.06_55)]",
+                "Confirmed": "bg-[oklch(0.94_0.04_85)] text-[oklch(0.45_0.08_75)] border-[oklch(0.88_0.05_85)]",
+                "Fulfilled": "bg-[oklch(0.93_0.04_210)] text-[oklch(0.38_0.07_205)] border-[oklch(0.85_0.05_210)]",
+                "Completed": "bg-[oklch(0.93_0.04_160)] text-[oklch(0.40_0.07_155)] border-[oklch(0.86_0.05_160)]",
+                "Canceled": "bg-[oklch(0.95_0.01_0)] text-[oklch(0.48_0.02_0)] border-[oklch(0.88_0.015_0)]",
+              }
+              const rowCount = record.products.length
+              const fmt = (v: number) =>
+                record.currency === "JPY"
+                  ? v.toLocaleString()
+                  : v % 1 === 0 ? v.toLocaleString() : v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+              return record.products.map((product, pIdx) => (
+                <TableRow
+                  key={`${record.id}-${pIdx}`}
+                  className={`h-10 ${pIdx > 0 ? "border-t-0" : ""}`}
+                >
+                  {pIdx === 0 && (
+                    <>
+                      <TableCell className="text-center text-[10px] align-top" rowSpan={rowCount}>{record.orderDate}</TableCell>
+                      <TableCell className="text-center align-top" rowSpan={rowCount}>
+                        <Badge
+                          variant="outline"
+                          className={`px-2 py-0.5 text-[10px] font-medium ${statusStyles[record.orderStatus] || ""}`}
+                        >
+                          {record.orderStatus}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center align-top" rowSpan={rowCount}>
+                        <span className="font-bold text-[10px]">
+                          {record.orderNo}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-[10px] align-top" rowSpan={rowCount}>
+                        {record.storeCode} / {record.storeName}
+                      </TableCell>
+                      <TableCell className="text-[10px] align-top" rowSpan={rowCount}>
+                        {record.locationCode} / {record.locationName}
+                      </TableCell>
+                    </>
+                  )}
+                  <TableCell className="text-[10px]">
+                    {product.productCode} / {product.productName}
+                  </TableCell>
+                  <TableCell className="text-center text-[10px] px-4">{product.qty}</TableCell>
+                  <TableCell className="text-center text-[10px] px-4">{record.currency}</TableCell>
+                  <TableCell className="text-right text-[10px] px-4">{fmt(product.unitPrice)}</TableCell>
+                  <TableCell className="text-right text-[10px] font-medium px-4 pr-6">{fmt(product.qty * product.unitPrice)}</TableCell>
+                </TableRow>
+              ))
+            })}
           </TableBody>
         </Table>
 
@@ -538,7 +767,7 @@ export function OrderList({ onSelectOrder }: OrderListProps) {
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] text-muted-foreground">Rows per page:</span>
             <Select defaultValue="30">
-              <SelectTrigger className="w-14 h-6 text-[10px]">
+              <SelectTrigger className="w-16 h-6 text-[10px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -548,7 +777,7 @@ export function OrderList({ onSelectOrder }: OrderListProps) {
               </SelectContent>
             </Select>
           </div>
-          <span className="text-[10px] text-muted-foreground">1-{orderRecords.length} of {orderRecords.length}</span>
+          <span className="text-[10px] text-muted-foreground">1-{sortedRecords.length} of {sortedRecords.length}</span>
           <div className="flex items-center gap-0.5">
             <Button variant="ghost" size="icon" className="h-6 w-6" disabled>
               <ChevronLeft className="h-3 w-3" />
