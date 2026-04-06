@@ -36,12 +36,13 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { orderRecords } from "@/lib/mock-data"
+import { orderRecords, type OrderRecord } from "@/lib/mock-data"
+import { OrderDetailModal } from "./order-detail-modal"
 
 interface OrderListProps {}
 
 type QuickDate = "today" | "week" | "month" | "3months"
-type SortField = "orderDate" | "orderNo" | "qty" | "store" | "location" | "unitPrice" | "totalAmount"
+type SortField = "orderDate" | "orderNo" | "store" | "location" | "totalQty" | "totalAmount"
 type SortDirection = "asc" | "desc"
 
 const BP_OPTIONS = [
@@ -192,6 +193,8 @@ export function OrderList() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
   const [selectedCurrency, setSelectedCurrency] = useState<string>("all")
+  const [detailOrder, setDetailOrder] = useState<OrderRecord | null>(null)
+  const [detailOpen, setDetailOpen] = useState(false)
 
   // Applied filter states (applied on Search click)
   const [appliedFilters, setAppliedFilters] = useState({
@@ -257,19 +260,20 @@ export function OrderList() {
     const rows: Record<string, string | number>[] = []
 
     sortedRecords.forEach((record) => {
-      record.products.forEach((product) => {
-        rows.push({
-          "Order Date": record.orderDate,
-          "Status": record.orderStatus,
-          "Order No.": record.orderNo,
-          "Store": `${record.storeCode} / ${record.storeName}`,
-          "Location": `${record.locationCode} / ${record.locationName}`,
-          "Product Info": `${product.productCode} / ${product.productName}`,
-          "Qty": product.qty,
-          "Currency": record.currency,
-          "Unit Price": product.unitPrice,
-          "Total Amount": product.qty * product.unitPrice,
-        })
+      const totalAmt = record.products.reduce((s, p) => s + p.qty * p.unitPrice, 0)
+      const net = Math.round(totalAmt / 1.1 * 100) / 100
+      const vat = Math.round((totalAmt - net) * 100) / 100
+      rows.push({
+        "Order Date": record.orderDate,
+        "Status": record.orderStatus,
+        "Order No.": record.orderNo,
+        "Store": `${record.storeCode} / ${record.storeName}`,
+        "Location": `${record.locationCode} / ${record.locationName}`,
+        "Currency": record.currency,
+        "Total Qty": record.products.reduce((s, p) => s + p.qty, 0),
+        "Total Price": totalAmt,
+        "Net Sales": net,
+        "VAT": vat,
       })
     })
 
@@ -314,8 +318,6 @@ export function OrderList() {
     r.products.reduce((s, p) => s + p.qty * p.unitPrice, 0)
   const getOrderQty = (r: typeof filteredRecords[0]) =>
     r.products.reduce((s, p) => s + p.qty, 0)
-  const getFirstUnitPrice = (r: typeof filteredRecords[0]) =>
-    r.products[0]?.unitPrice ?? 0
 
   const sortedRecords = [...filteredRecords].sort((a, b) => {
     let comparison = 0
@@ -326,7 +328,7 @@ export function OrderList() {
       case "orderNo":
         comparison = a.orderNo.localeCompare(b.orderNo)
         break
-      case "qty":
+      case "totalQty":
         comparison = getOrderQty(a) - getOrderQty(b)
         break
       case "store":
@@ -334,9 +336,6 @@ export function OrderList() {
         break
       case "location":
         comparison = a.locationCode.localeCompare(b.locationCode)
-        break
-      case "unitPrice":
-        comparison = getFirstUnitPrice(a) - getFirstUnitPrice(b)
         break
       case "totalAmount":
         comparison = getOrderTotal(a) - getOrderTotal(b)
@@ -628,7 +627,7 @@ export function OrderList() {
         </div>
 
         {/* Table */}
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow className="bg-muted/50 h-12 text-[10px]">
               <TableHead className="text-center">
@@ -670,39 +669,27 @@ export function OrderList() {
                 </button>
                 <span className="text-[10px] text-muted-foreground">(Code / Name)</span>
               </TableHead>
-              <TableHead>
-                Product Info
-                <br />
-                <span className="text-[10px] text-muted-foreground">(Code / Name)</span>
-              </TableHead>
-              <TableHead className="text-center px-4">
+              <TableHead className="text-center">Currency</TableHead>
+              <TableHead className="text-center">
                 <button
-                  onClick={() => handleSort("qty")}
+                  onClick={() => handleSort("totalQty")}
                   className="flex items-center justify-center w-full hover:text-primary transition-colors"
                 >
-                  Qty
-                  {getSortIcon("qty")}
+                  Total Qty
+                  {getSortIcon("totalQty")}
                 </button>
               </TableHead>
-              <TableHead className="text-center px-4">Currency</TableHead>
-              <TableHead className="text-right px-4">
-                <button
-                  onClick={() => handleSort("unitPrice")}
-                  className="flex items-center justify-end w-full hover:text-primary transition-colors"
-                >
-                  Unit Price
-                  {getSortIcon("unitPrice")}
-                </button>
-              </TableHead>
-              <TableHead className="text-right px-4 pr-6">
+              <TableHead className="text-right">
                 <button
                   onClick={() => handleSort("totalAmount")}
                   className="flex items-center justify-end w-full hover:text-primary transition-colors"
                 >
-                  Total Amount
+                  Total Price
                   {getSortIcon("totalAmount")}
                 </button>
               </TableHead>
+              <TableHead className="text-right">Net Sales</TableHead>
+              <TableHead className="text-right">VAT</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -714,50 +701,41 @@ export function OrderList() {
                 "Completed": "bg-[oklch(0.93_0.04_160)] text-[oklch(0.40_0.07_155)] border-[oklch(0.86_0.05_160)]",
                 "Canceled": "bg-[oklch(0.95_0.01_0)] text-[oklch(0.48_0.02_0)] border-[oklch(0.88_0.015_0)]",
               }
-              const rowCount = record.products.length
+              const orderTotal = getOrderTotal(record)
+              const orderQty = getOrderQty(record)
               const fmt = (v: number) =>
                 record.currency === "JPY"
                   ? v.toLocaleString()
                   : v % 1 === 0 ? v.toLocaleString() : v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-              return record.products.map((product, pIdx) => (
-                <TableRow
-                  key={`${record.id}-${pIdx}`}
-                  className={`h-10 ${pIdx > 0 ? "border-t-0" : ""}`}
-                >
-                  {pIdx === 0 && (
-                    <>
-                      <TableCell className="text-center text-[10px] align-top" rowSpan={rowCount}>{record.orderDate}</TableCell>
-                      <TableCell className="text-center align-top" rowSpan={rowCount}>
-                        <Badge
-                          variant="outline"
-                          className={`px-2 py-0.5 text-[10px] font-medium ${statusStyles[record.orderStatus] || ""}`}
-                        >
-                          {record.orderStatus}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center align-top" rowSpan={rowCount}>
-                        <span className="font-bold text-[10px]">
-                          {record.orderNo}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-[10px] align-top" rowSpan={rowCount}>
-                        {record.storeCode} / {record.storeName}
-                      </TableCell>
-                      <TableCell className="text-[10px] align-top" rowSpan={rowCount}>
-                        {record.locationCode} / {record.locationName}
-                      </TableCell>
-                    </>
-                  )}
-                  <TableCell className="text-[10px]">
-                    {product.productCode} / {product.productName}
+              return (
+                <TableRow key={record.id} className="h-10">
+                  <TableCell className="text-center text-[10px]">{record.orderDate}</TableCell>
+                  <TableCell className="text-center">
+                    <Badge
+                      variant="outline"
+                      className={`px-2 py-0.5 text-[10px] font-medium ${statusStyles[record.orderStatus] || ""}`}
+                    >
+                      {record.orderStatus}
+                    </Badge>
                   </TableCell>
-                  <TableCell className="text-center text-[10px] px-4">{product.qty}</TableCell>
-                  <TableCell className="text-center text-[10px] px-4">{record.currency}</TableCell>
-                  <TableCell className="text-right text-[10px] px-4">{fmt(product.unitPrice)}</TableCell>
-                  <TableCell className="text-right text-[10px] font-medium px-4 pr-6">{fmt(product.qty * product.unitPrice)}</TableCell>
+                  <TableCell className="text-center">
+                    <button
+                      className="font-bold text-[10px] text-primary underline cursor-pointer hover:text-primary/80 transition-colors"
+                      onClick={() => { setDetailOrder(record); setDetailOpen(true) }}
+                    >
+                      {record.orderNo}
+                    </button>
+                  </TableCell>
+                  <TableCell className="text-[10px]">{record.storeCode} / {record.storeName}</TableCell>
+                  <TableCell className="text-[10px]">{record.locationCode} / {record.locationName}</TableCell>
+                  <TableCell className="text-center text-[10px]">{record.currency}</TableCell>
+                  <TableCell className="text-center text-[10px]">{orderQty.toLocaleString()}</TableCell>
+                  <TableCell className="text-right text-[10px] font-medium">{fmt(orderTotal)}</TableCell>
+                  <TableCell className="text-right text-[10px]">{fmt(Math.round(orderTotal / 1.1 * 100) / 100)}</TableCell>
+                  <TableCell className="text-right text-[10px]">{fmt(Math.round((orderTotal - Math.round(orderTotal / 1.1 * 100) / 100) * 100) / 100)}</TableCell>
                 </TableRow>
-              ))
+              )
             })}
           </TableBody>
         </Table>
@@ -788,6 +766,12 @@ export function OrderList() {
           </div>
         </div>
       </div>
+
+      <OrderDetailModal
+        order={detailOrder}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+      />
     </div>
   )
 }
