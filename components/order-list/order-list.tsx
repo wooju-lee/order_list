@@ -260,20 +260,25 @@ export function OrderList() {
     const rows: Record<string, string | number>[] = []
 
     sortedRecords.forEach((record) => {
-      const totalAmt = record.products.reduce((s, p) => s + p.qty * p.unitPrice, 0)
-      const net = Math.round(totalAmt / 1.1 * 100) / 100
-      const vat = Math.round((totalAmt - net) * 100) / 100
-      rows.push({
-        "Order Date": record.orderDate,
-        "Status": record.orderStatus,
-        "Order No.": record.orderNo,
-        "Store": `${record.storeCode} / ${record.storeName}`,
-        "Location": `${record.locationCode} / ${record.locationName}`,
-        "Currency": record.currency,
-        "Total Qty": record.products.reduce((s, p) => s + p.qty, 0),
-        "Total Price": totalAmt,
-        "Net Sales": net,
-        "VAT": vat,
+      record.products.forEach((product) => {
+        const itemTotal = product.qty * product.unitPrice
+        const itemNet = Math.round(itemTotal / 1.1 * 100) / 100
+        const itemVat = Math.round((itemTotal - itemNet) * 100) / 100
+        rows.push({
+          "Order Date": record.orderDate,
+          "Status": record.orderStatus,
+          "Order No.": record.orderNo,
+          "Store": `${record.storeCode} / ${record.storeName}`,
+          "Location": `${record.locationCode} / ${record.locationName}`,
+          "Currency": record.currency,
+          "Product Code": product.productCode,
+          "Product Name": product.productName,
+          "Qty": product.qty,
+          "Unit Price": product.unitPrice,
+          "Total Price": itemTotal,
+          "Net Sales": itemNet,
+          "VAT": itemVat,
+        })
       })
     })
 
