@@ -358,7 +358,7 @@ export function OrderList() {
       <div>
         <h1 className="text-lg font-extrabold">Order List</h1>
         <p className="text-[10px] text-muted-foreground mt-0.5">
-          View and search all online and offline order information.
+          View and search all order information.
         </p>
       </div>
 
