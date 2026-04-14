@@ -379,7 +379,7 @@ export function ReturnList() {
 
           <div className="w-[160px]">
             <MultiSelectPopover
-              label="Return Type"
+              label="Refund Type"
               options={TYPE_OPTIONS}
               selected={selectedTypes}
               onToggle={(v) => setSelectedTypes(toggleInList(selectedTypes, v))}
@@ -500,7 +500,7 @@ export function ReturnList() {
                   {getSortIcon("returnDate")}
                 </button>
               </TableHead>
-              <TableHead className="text-center">Type</TableHead>
+              <TableHead className="text-center">Refund Type</TableHead>
               <TableHead className="text-center">
                 <button
                   onClick={() => handleSort("returnNo")}
