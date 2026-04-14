@@ -53,11 +53,11 @@ export function ReturnDetailModal({ returnRecord, open, onOpenChange }: ReturnDe
           </div>
         </DialogHeader>
 
-        {/* Return Info */}
+        {/* Refund Info */}
         <div className="px-6 py-4">
           <div className="flex items-center gap-1.5 mb-3">
             <RotateCcw className="h-3.5 w-3.5 text-primary" />
-            <h3 className="text-[11px] font-semibold">Return Information</h3>
+            <h3 className="text-[11px] font-semibold">Refund Information</h3>
           </div>
           <div className="grid grid-cols-4 gap-x-6 gap-y-2.5">
             <div>
@@ -84,7 +84,7 @@ export function ReturnDetailModal({ returnRecord, open, onOpenChange }: ReturnDe
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-1.5">
               <Package className="h-3.5 w-3.5 text-primary" />
-              <h3 className="text-[11px] font-semibold">Returned Products</h3>
+              <h3 className="text-[11px] font-semibold">Refund Products</h3>
             </div>
             <Badge variant="secondary" className="text-[9px]">{returnRecord.products.length} items</Badge>
           </div>
