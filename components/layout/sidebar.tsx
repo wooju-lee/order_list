@@ -44,7 +44,7 @@ const menuItems: MenuItem[] = [
     icon: <ClipboardList className="h-4 w-4" />,
     children: [
       { label: "Order List" },
-      { label: "Return List" },
+      { label: "Refund List" },
     ],
   },
   {

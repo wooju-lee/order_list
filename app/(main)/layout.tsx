@@ -6,7 +6,7 @@ import { Sidebar } from '@/components/layout/sidebar'
 
 const MENU_ROUTES: Record<string, string> = {
   "Order List": "/",
-  "Return List": "/returns",
+  "Refund List": "/returns",
 }
 
 const ROUTE_MENUS: Record<string, string> = Object.fromEntries(

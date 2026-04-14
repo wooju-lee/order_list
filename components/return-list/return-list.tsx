@@ -254,7 +254,7 @@ export function ReturnList() {
         rows.push({
           "Refund Date": record.returnDate,
           "Type": record.returnType,
-          "Return No.": record.returnNo,
+          "Refund No.": record.returnNo,
           "Original Order": record.originalOrderNo,
           "Store": `${record.storeCode} / ${record.storeName}`,
           "Location": `${record.locationCode} / ${record.locationName}`,
@@ -272,8 +272,8 @@ export function ReturnList() {
 
     const ws = XLSX.utils.json_to_sheet(rows)
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, "Returns")
-    XLSX.writeFile(wb, `returns_${new Date().toISOString().split("T")[0]}.xlsx`)
+    XLSX.utils.book_append_sheet(wb, ws, "Refunds")
+    XLSX.writeFile(wb, `refunds_${new Date().toISOString().split("T")[0]}.xlsx`)
   }
 
   const filteredRecords = returnRecords.filter((record) => {
@@ -335,14 +335,14 @@ export function ReturnList() {
       <nav className="flex items-center gap-1.5 text-[10px]">
         <span className="text-muted-foreground">Order</span>
         <ChevronRight className="h-3 w-3 text-muted-foreground" />
-        <span className="text-primary font-medium">Return List</span>
+        <span className="text-primary font-medium">Refund List</span>
       </nav>
 
       {/* Page Title */}
       <div>
-        <h1 className="text-lg font-extrabold">Return List</h1>
+        <h1 className="text-lg font-extrabold">Refund List</h1>
         <p className="text-[10px] text-muted-foreground mt-0.5">
-          View and search all return and refund information.
+          View and search all refund information.
         </p>
       </div>
 
@@ -454,7 +454,7 @@ export function ReturnList() {
         <div className="flex items-end justify-between gap-3">
           <div className="flex-1">
             <label className="block text-[10px] text-muted-foreground mb-1">
-              Return No., Original Order No., Store Code, Store Name
+              Refund No., Original Order No., Store Code, Store Name
             </label>
             <Input
               placeholder="Enter at least 2 characters"
@@ -506,7 +506,7 @@ export function ReturnList() {
                   onClick={() => handleSort("returnNo")}
                   className="flex items-center justify-center w-full hover:text-primary transition-colors"
                 >
-                  Return No. #
+                  Refund No. #
                   {getSortIcon("returnNo")}
                 </button>
               </TableHead>
