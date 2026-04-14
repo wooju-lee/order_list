@@ -69,6 +69,10 @@ export function ReturnDetailModal({ returnRecord, open, onOpenChange }: ReturnDe
               <p className="text-[10px] font-medium mt-0.5">{returnRecord.storeCode} / {returnRecord.storeName}</p>
             </div>
             <div>
+              <p className="text-[9px] text-muted-foreground">Location</p>
+              <p className="text-[10px] font-medium mt-0.5">{returnRecord.locationCode} / {returnRecord.locationName}</p>
+            </div>
+            <div>
               <p className="text-[9px] text-muted-foreground">Currency</p>
               <p className="text-[10px] font-medium mt-0.5">{returnRecord.currency}</p>
             </div>
