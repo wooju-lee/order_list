@@ -510,7 +510,7 @@ export function ReturnList() {
                   {getSortIcon("returnNo")}
                 </button>
               </TableHead>
-              <TableHead className="text-center">Original Order</TableHead>
+              <TableHead className="text-center">Original Order No. #</TableHead>
               <TableHead>
                 <button
                   onClick={() => handleSort("store")}
