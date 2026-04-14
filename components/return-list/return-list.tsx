@@ -521,6 +521,16 @@ export function ReturnList() {
                 </button>
                 <span className="text-[10px] text-muted-foreground">(Code / Name)</span>
               </TableHead>
+              <TableHead>
+                <button
+                  onClick={() => handleSort("location")}
+                  className="flex items-center w-full hover:text-primary transition-colors"
+                >
+                  Location
+                  {getSortIcon("location")}
+                </button>
+                <span className="text-[10px] text-muted-foreground">(Code / Name)</span>
+              </TableHead>
               <TableHead className="text-center">Currency</TableHead>
               <TableHead className="text-center">
                 <button
@@ -586,6 +596,7 @@ export function ReturnList() {
                   </TableCell>
                   <TableCell className="text-center text-[10px]">{record.originalOrderNo}</TableCell>
                   <TableCell className="text-[10px]">{record.storeCode} / {record.storeName}</TableCell>
+                  <TableCell className="text-[10px]">{record.locationCode} / {record.locationName}</TableCell>
                   <TableCell className="text-center text-[10px]">{record.currency}</TableCell>
                   <TableCell className="text-center text-[10px]">-{returnQty.toLocaleString()}</TableCell>
                   <TableCell className="text-right text-[10px] font-medium">{fmt(returnTotal)}</TableCell>
