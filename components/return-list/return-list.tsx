@@ -36,13 +36,11 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { orderRecords, type OrderRecord } from "@/lib/mock-data"
-import { OrderDetailModal } from "./order-detail-modal"
-
-interface OrderListProps {}
+import { returnRecords, type ReturnRecord } from "@/lib/mock-data"
+import { ReturnDetailModal } from "./return-detail-modal"
 
 type QuickDate = "today" | "week" | "month" | "3months"
-type SortField = "orderDate" | "orderNo" | "store" | "location" | "totalQty" | "totalAmount"
+type SortField = "returnDate" | "returnNo" | "store" | "location" | "totalQty" | "totalAmount"
 type SortDirection = "asc" | "desc"
 
 const BP_OPTIONS = [
@@ -68,18 +66,10 @@ const STORE_OPTIONS_BY_BP: Record<string, { value: string; label: string }[]> = 
   ],
 }
 
-const ORDER_TYPE_OPTIONS = [
-  { value: "RX", label: "RX" },
-  { value: "Pre-Order", label: "Pre-Order" },
-  { value: "Standard", label: "Standard" },
-]
-
-const STATUS_OPTIONS = [
-  { value: "Pending", label: "Pending" },
-  { value: "Confirmed", label: "Confirmed" },
-  { value: "Fulfilled", label: "Fulfilled" },
-  { value: "Completed", label: "Completed" },
-  { value: "Canceled", label: "Canceled" },
+const TYPE_OPTIONS = [
+  { value: "REFUND", label: "Refund" },
+  { value: "EXCHANGE", label: "Exchange" },
+  { value: "FORCE_REFUND", label: "Force Refund" },
 ]
 
 const formatDate = (date: Date) => date.toISOString().split("T")[0]
@@ -148,7 +138,7 @@ function MultiSelectPopover({
   )
 }
 
-export function OrderList() {
+export function ReturnList() {
   const [quickDate, setQuickDate] = useState<QuickDate | null>(null)
   const [startDate, setStartDate] = useState(formatDate(thirtyDaysAgo))
   const [endDate, setEndDate] = useState(formatDate(today))
@@ -183,24 +173,21 @@ export function OrderList() {
     }
   }
 
-  const [sortField, setSortField] = useState<SortField>("orderDate")
+  const [sortField, setSortField] = useState<SortField>("returnDate")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const [searchText, setSearchText] = useState("")
 
-  // Filter input states (not yet applied)
   const [selectedBP, setSelectedBP] = useState<string>("")
   const [selectedStores, setSelectedStores] = useState<string[]>([])
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
   const [selectedCurrency, setSelectedCurrency] = useState<string>("all")
-  const [detailOrder, setDetailOrder] = useState<OrderRecord | null>(null)
+  const [detailRecord, setDetailRecord] = useState<ReturnRecord | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
 
-  // Applied filter states (applied on Search click)
   const [appliedFilters, setAppliedFilters] = useState({
     bp: "",
     stores: [] as string[],
-    statuses: [] as string[],
+    types: [] as string[],
     currency: "all",
     startDate: formatDate(thirtyDaysAgo),
     endDate: formatDate(today),
@@ -211,7 +198,7 @@ export function OrderList() {
     setAppliedFilters({
       bp: selectedBP,
       stores: selectedStores,
-      statuses: selectedStatuses,
+      types: selectedTypes,
       currency: selectedCurrency,
       startDate,
       endDate,
@@ -261,52 +248,49 @@ export function OrderList() {
 
     sortedRecords.forEach((record) => {
       record.products.forEach((product) => {
-        const lineTotal = product.qty * product.unitPrice
-        const lineVat = Math.round((lineTotal - Math.round(lineTotal / 1.1 * 100) / 100) * 100) / 100
+        const itemTotal = product.qty * product.unitPrice
+        const itemNet = Math.round(itemTotal / 1.1 * 100) / 100
+        const itemVat = Math.round((itemTotal - itemNet) * 100) / 100
         rows.push({
-          "Order Date": record.orderDate,
-          "Status": record.orderStatus,
-          "Order No.": record.orderNo,
+          "Refund Date": record.returnDate,
+          "Type": record.returnType,
+          "Return No.": record.returnNo,
+          "Original Order": record.originalOrderNo,
           "Store": `${record.storeCode} / ${record.storeName}`,
           "Location": `${record.locationCode} / ${record.locationName}`,
-          "Qty": product.qty,
           "Currency": record.currency,
+          "Product Code": product.productCode,
+          "Product Name": product.productName,
+          "Qty": -product.qty,
           "Unit Price": product.unitPrice,
-          "VAT": lineVat,
-          "Total Amount": lineTotal,
+          "Total Price": -itemTotal,
+          "Net Sales": -itemNet,
+          "VAT": -itemVat,
         })
       })
     })
 
     const ws = XLSX.utils.json_to_sheet(rows)
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, "Orders")
-    XLSX.writeFile(wb, `orders_${new Date().toISOString().split("T")[0]}.xlsx`)
+    XLSX.utils.book_append_sheet(wb, ws, "Returns")
+    XLSX.writeFile(wb, `returns_${new Date().toISOString().split("T")[0]}.xlsx`)
   }
 
-  const filteredRecords = orderRecords.filter((record) => {
-    // BP filter
+  const filteredRecords = returnRecords.filter((record) => {
     if (appliedFilters.bp && record.bpCode !== appliedFilters.bp) return false
-
-    // Store filter
     if (appliedFilters.stores.length > 0 && !appliedFilters.stores.includes(record.storeCode)) return false
-
-    // Status filter
-    if (appliedFilters.statuses.length > 0 && !appliedFilters.statuses.includes(record.orderStatus)) return false
-
-    // Currency filter
+    if (appliedFilters.types.length > 0 && !appliedFilters.types.includes(record.returnType)) return false
     if (appliedFilters.currency !== "all" && record.currency !== appliedFilters.currency) return false
 
-    // Date range filter
-    const recordDate = record.orderDate.split(" ")[0]
+    const recordDate = record.returnDate.split(" ")[0]
     if (appliedFilters.startDate && recordDate < appliedFilters.startDate) return false
     if (appliedFilters.endDate && recordDate > appliedFilters.endDate) return false
 
-    // Text search filter
     if (appliedFilters.searchText.length >= 2) {
       const q = appliedFilters.searchText.toLowerCase()
       const match =
-        record.orderNo.toLowerCase().includes(q) ||
+        record.returnNo.toLowerCase().includes(q) ||
+        record.originalOrderNo.toLowerCase().includes(q) ||
         record.storeCode.toLowerCase().includes(q) ||
         record.storeName.toLowerCase().includes(q)
       if (!match) return false
@@ -315,22 +299,22 @@ export function OrderList() {
     return true
   })
 
-  const getOrderTotal = (r: typeof filteredRecords[0]) =>
+  const getReturnTotal = (r: typeof filteredRecords[0]) =>
     r.products.reduce((s, p) => s + p.qty * p.unitPrice, 0)
-  const getOrderQty = (r: typeof filteredRecords[0]) =>
+  const getReturnQty = (r: typeof filteredRecords[0]) =>
     r.products.reduce((s, p) => s + p.qty, 0)
 
   const sortedRecords = [...filteredRecords].sort((a, b) => {
     let comparison = 0
     switch (sortField) {
-      case "orderDate":
-        comparison = new Date(a.orderDate.split(" ")[0]).getTime() - new Date(b.orderDate.split(" ")[0]).getTime()
+      case "returnDate":
+        comparison = new Date(a.returnDate.split(" ")[0]).getTime() - new Date(b.returnDate.split(" ")[0]).getTime()
         break
-      case "orderNo":
-        comparison = a.orderNo.localeCompare(b.orderNo)
+      case "returnNo":
+        comparison = a.returnNo.localeCompare(b.returnNo)
         break
       case "totalQty":
-        comparison = getOrderQty(a) - getOrderQty(b)
+        comparison = getReturnQty(a) - getReturnQty(b)
         break
       case "store":
         comparison = a.storeCode.localeCompare(b.storeCode)
@@ -339,7 +323,7 @@ export function OrderList() {
         comparison = a.locationCode.localeCompare(b.locationCode)
         break
       case "totalAmount":
-        comparison = getOrderTotal(a) - getOrderTotal(b)
+        comparison = getReturnTotal(a) - getReturnTotal(b)
         break
     }
     return sortDirection === "asc" ? comparison : -comparison
@@ -351,14 +335,14 @@ export function OrderList() {
       <nav className="flex items-center gap-1.5 text-[10px]">
         <span className="text-muted-foreground">Order</span>
         <ChevronRight className="h-3 w-3 text-muted-foreground" />
-        <span className="text-primary font-medium">Order List</span>
+        <span className="text-primary font-medium">Return List</span>
       </nav>
 
       {/* Page Title */}
       <div>
-        <h1 className="text-lg font-extrabold">Order List</h1>
+        <h1 className="text-lg font-extrabold">Return List</h1>
         <p className="text-[10px] text-muted-foreground mt-0.5">
-          View and search all online and offline order information.
+          View and search all return and refund information.
         </p>
       </div>
 
@@ -366,7 +350,6 @@ export function OrderList() {
       <div className="bg-card rounded-xl border border-border p-4">
         {/* Row 1 - Dropdowns */}
         <div className="flex flex-wrap gap-3 mb-4">
-          {/* BP */}
           <div className="w-[160px]">
             <label className="block text-[10px] font-medium text-foreground mb-1.5">BP</label>
             <Select value={selectedBP} onValueChange={handleBPChange}>
@@ -383,7 +366,6 @@ export function OrderList() {
             </Select>
           </div>
 
-          {/* Store */}
           <div className="w-[160px]">
             <MultiSelectPopover
               label="Store"
@@ -395,18 +377,16 @@ export function OrderList() {
             />
           </div>
 
-          {/* Order Status */}
           <div className="w-[160px]">
             <MultiSelectPopover
-              label="Order Status"
-              options={STATUS_OPTIONS}
-              selected={selectedStatuses}
-              onToggle={(v) => setSelectedStatuses(toggleInList(selectedStatuses, v))}
-              onToggleAll={() => setSelectedStatuses(toggleAll(selectedStatuses, STATUS_OPTIONS))}
+              label="Return Type"
+              options={TYPE_OPTIONS}
+              selected={selectedTypes}
+              onToggle={(v) => setSelectedTypes(toggleInList(selectedTypes, v))}
+              onToggleAll={() => setSelectedTypes(toggleAll(selectedTypes, TYPE_OPTIONS))}
             />
           </div>
 
-          {/* Currency */}
           <div className="w-[160px]">
             <label className="block text-[10px] font-medium text-foreground mb-1.5">Currency</label>
             <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
@@ -425,7 +405,7 @@ export function OrderList() {
 
         {/* Row 2 - Date Range */}
         <div className="mb-4">
-          <label className="block text-[10px] font-medium text-foreground mb-1.5">Order Date</label>
+          <label className="block text-[10px] font-medium text-foreground mb-1.5">Refund Date</label>
           <div className="flex items-center gap-2">
             <div className="relative">
               <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none z-10" />
@@ -474,7 +454,7 @@ export function OrderList() {
         <div className="flex items-end justify-between gap-3">
           <div className="flex-1">
             <label className="block text-[10px] text-muted-foreground mb-1">
-              Order No., Store Code, Store Name
+              Return No., Original Order No., Store Code, Store Name
             </label>
             <Input
               placeholder="Enter at least 2 characters"
@@ -511,26 +491,27 @@ export function OrderList() {
         <Table className="table-fixed">
           <TableHeader>
             <TableRow className="bg-muted/50 h-12 text-[10px]">
-              <TableHead className="text-left">
+              <TableHead className="text-center">
                 <button
-                  onClick={() => handleSort("orderDate")}
-                  className="flex items-center w-full hover:text-primary transition-colors"
+                  onClick={() => handleSort("returnDate")}
+                  className="flex items-center justify-center w-full hover:text-primary transition-colors"
                 >
-                  Order Date
-                  {getSortIcon("orderDate")}
+                  Refund Date
+                  {getSortIcon("returnDate")}
                 </button>
               </TableHead>
-              <TableHead className="text-center">Status</TableHead>
-              <TableHead className="text-left">
+              <TableHead className="text-center">Type</TableHead>
+              <TableHead className="text-center">
                 <button
-                  onClick={() => handleSort("orderNo")}
-                  className="flex items-center w-full hover:text-primary transition-colors"
+                  onClick={() => handleSort("returnNo")}
+                  className="flex items-center justify-center w-full hover:text-primary transition-colors"
                 >
-                  Order No. #
-                  {getSortIcon("orderNo")}
+                  Return No. #
+                  {getSortIcon("returnNo")}
                 </button>
               </TableHead>
-              <TableHead className="text-left">
+              <TableHead className="text-center">Original Order</TableHead>
+              <TableHead>
                 <button
                   onClick={() => handleSort("store")}
                   className="flex items-center w-full hover:text-primary transition-colors"
@@ -540,72 +521,76 @@ export function OrderList() {
                 </button>
                 <span className="text-[10px] text-muted-foreground">(Code / Name)</span>
               </TableHead>
-              <TableHead className="text-left">
-                <button
-                  onClick={() => handleSort("location")}
-                  className="flex items-center w-full hover:text-primary transition-colors"
-                >
-                  Location
-                  {getSortIcon("location")}
-                </button>
-                <span className="text-[10px] text-muted-foreground">(Code / Name)</span>
-              </TableHead>
               <TableHead className="text-center">Currency</TableHead>
-              <TableHead className="text-right">Net Sales</TableHead>
-              <TableHead className="text-right">VAT</TableHead>
+              <TableHead className="text-center">
+                <button
+                  onClick={() => handleSort("totalQty")}
+                  className="flex items-center justify-center w-full hover:text-primary transition-colors"
+                >
+                  Total Qty
+                  {getSortIcon("totalQty")}
+                </button>
+              </TableHead>
               <TableHead className="text-right">
                 <button
                   onClick={() => handleSort("totalAmount")}
                   className="flex items-center justify-end w-full hover:text-primary transition-colors"
                 >
-                  Total Amount
+                  Total Price
                   {getSortIcon("totalAmount")}
                 </button>
               </TableHead>
+              <TableHead className="text-right">Net Sales</TableHead>
+              <TableHead className="text-right">VAT</TableHead>
+
             </TableRow>
           </TableHeader>
           <TableBody>
             {sortedRecords.map((record) => {
-              const statusStyles: Record<string, string> = {
-                "Pending": "bg-[oklch(0.95_0.02_55)] text-[oklch(0.45_0.03_55)] border-[oklch(0.90_0.02_55)]",
-                "Confirmed": "bg-[oklch(0.95_0.02_155)] text-[oklch(0.45_0.03_155)] border-[oklch(0.90_0.02_155)]",
-                "Fulfilled": "bg-[oklch(0.95_0.02_230)] text-[oklch(0.45_0.03_230)] border-[oklch(0.90_0.02_230)]",
-                "Completed": "bg-[oklch(0.95_0.02_280)] text-[oklch(0.45_0.03_280)] border-[oklch(0.90_0.02_280)]",
-                "Canceled": "bg-[oklch(0.95_0.02_0)] text-[oklch(0.45_0.03_0)] border-[oklch(0.90_0.02_0)]",
+              const typeStyles: Record<string, string> = {
+                "REFUND": "bg-[oklch(0.95_0.02_230)] text-[oklch(0.45_0.03_230)] border-[oklch(0.90_0.02_230)]",
+                "EXCHANGE": "bg-[oklch(0.95_0.02_155)] text-[oklch(0.45_0.03_155)] border-[oklch(0.90_0.02_155)]",
+                "FORCE_REFUND": "bg-[oklch(0.95_0.02_15)] text-[oklch(0.45_0.03_15)] border-[oklch(0.90_0.02_15)]",
               }
-              const orderTotal = getOrderTotal(record)
-              const orderNet = Math.round(orderTotal / 1.1 * 100) / 100
-              const orderVat = Math.round((orderTotal - orderNet) * 100) / 100
-              const fmt = (v: number) =>
+              const typeLabels: Record<string, string> = {
+                "REFUND": "Refund",
+                "EXCHANGE": "Exchange",
+                "FORCE_REFUND": "Force Refund",
+              }
+              const returnTotal = getReturnTotal(record)
+              const returnQty = getReturnQty(record)
+              const fmtRaw = (v: number) =>
                 record.currency === "JPY"
                   ? v.toLocaleString()
                   : v % 1 === 0 ? v.toLocaleString() : v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              const fmt = (v: number) => `-${fmtRaw(v)}`
 
               return (
                 <TableRow key={record.id} className="h-10">
-                  <TableCell className="text-left text-[10px]">{record.orderDate}</TableCell>
+                  <TableCell className="text-center text-[10px]">{record.returnDate}</TableCell>
                   <TableCell className="text-center">
                     <Badge
                       variant="outline"
-                      className={`px-2 py-0.5 text-[10px] font-medium ${statusStyles[record.orderStatus] || ""}`}
+                      className={`px-2 py-0.5 text-[10px] font-medium ${typeStyles[record.returnType] || ""}`}
                     >
-                      {record.orderStatus}
+                      {typeLabels[record.returnType] || record.returnType}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-left">
+                  <TableCell className="text-center">
                     <button
                       className="font-bold text-[10px] text-primary underline cursor-pointer hover:text-primary/80 transition-colors"
-                      onClick={() => { setDetailOrder(record); setDetailOpen(true) }}
+                      onClick={() => { setDetailRecord(record); setDetailOpen(true) }}
                     >
-                      {record.orderNo}
+                      {record.returnNo}
                     </button>
                   </TableCell>
-                  <TableCell className="text-left text-[10px]">{record.storeCode} / {record.storeName}</TableCell>
-                  <TableCell className="text-left text-[10px]">{record.locationCode} / {record.locationName}</TableCell>
+                  <TableCell className="text-center text-[10px]">{record.originalOrderNo}</TableCell>
+                  <TableCell className="text-[10px]">{record.storeCode} / {record.storeName}</TableCell>
                   <TableCell className="text-center text-[10px]">{record.currency}</TableCell>
-                  <TableCell className="text-right text-[10px]">{fmt(orderNet)}</TableCell>
-                  <TableCell className="text-right text-[10px]">{fmt(orderVat)}</TableCell>
-                  <TableCell className="text-right text-[10px] font-medium">{fmt(orderTotal)}</TableCell>
+                  <TableCell className="text-center text-[10px]">-{returnQty.toLocaleString()}</TableCell>
+                  <TableCell className="text-right text-[10px] font-medium">{fmt(returnTotal)}</TableCell>
+                  <TableCell className="text-right text-[10px]">{fmt(Math.round(returnTotal / 1.1 * 100) / 100)}</TableCell>
+                  <TableCell className="text-right text-[10px]">{fmt(Math.round((returnTotal - Math.round(returnTotal / 1.1 * 100) / 100) * 100) / 100)}</TableCell>
                 </TableRow>
               )
             })}
@@ -639,8 +624,8 @@ export function OrderList() {
         </div>
       </div>
 
-      <OrderDetailModal
-        order={detailOrder}
+      <ReturnDetailModal
+        returnRecord={detailRecord}
         open={detailOpen}
         onOpenChange={setDetailOpen}
       />

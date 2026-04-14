@@ -44,6 +44,7 @@ const menuItems: MenuItem[] = [
     icon: <ClipboardList className="h-4 w-4" />,
     children: [
       { label: "Order List" },
+      { label: "Return List" },
     ],
   },
   {
@@ -72,12 +73,16 @@ const menuItems: MenuItem[] = [
   },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  activeMenu: string
+  onMenuChange: (menu: string) => void
+}
+
+export function Sidebar({ activeMenu, onMenuChange }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [expandedMenus, setExpandedMenus] = useState<string[]>(["Order"])
   const alwaysExpanded = ["Order"]
   const [expandedSubMenus, setExpandedSubMenus] = useState<string[]>([])
-  const [activeMenu] = useState("Order List")
 
   const toggleMenu = (label: string) => {
     if (alwaysExpanded.includes(label)) return
@@ -143,6 +148,7 @@ export function Sidebar() {
                   {item.children.map((child) => (
                     <div
                       key={child.label}
+                      onClick={() => onMenuChange(child.label)}
                       className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors ${
                         activeMenu === child.label
                           ? "bg-primary/10 text-primary font-semibold"
