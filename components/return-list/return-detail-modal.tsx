@@ -65,10 +65,6 @@ export function ReturnDetailModal({ returnRecord, open, onOpenChange }: ReturnDe
               <p className="text-[10px] font-medium mt-0.5">{returnRecord.returnDate}</p>
             </div>
             <div>
-              <p className="text-[9px] text-muted-foreground">Original Order</p>
-              <p className="text-[10px] font-medium mt-0.5">{returnRecord.originalOrderNo}</p>
-            </div>
-            <div>
               <p className="text-[9px] text-muted-foreground">Store</p>
               <p className="text-[10px] font-medium mt-0.5">{returnRecord.storeCode} / {returnRecord.storeName}</p>
             </div>
