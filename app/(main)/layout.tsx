@@ -1,23 +1,36 @@
 'use client'
 
-import { useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import { Header } from '@/components/layout/header'
 import { Sidebar } from '@/components/layout/sidebar'
-import { OrderList } from '@/components/order-list/order-list'
-import { ReturnList } from '@/components/return-list/return-list'
 
-export default function OrderListPage() {
-  const [activeMenu, setActiveMenu] = useState("Order List")
+const MENU_ROUTES: Record<string, string> = {
+  "Order List": "/",
+  "Return List": "/returns",
+}
+
+const ROUTE_MENUS: Record<string, string> = Object.fromEntries(
+  Object.entries(MENU_ROUTES).map(([k, v]) => [v, k])
+)
+
+export default function MainLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const router = useRouter()
+  const activeMenu = ROUTE_MENUS[pathname] || "Order List"
+
+  const handleMenuChange = (menu: string) => {
+    const route = MENU_ROUTES[menu]
+    if (route) router.push(route)
+  }
 
   return (
     <div className="flex flex-col h-screen bg-background">
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar activeMenu={activeMenu} onMenuChange={setActiveMenu} />
+        <Sidebar activeMenu={activeMenu} onMenuChange={handleMenuChange} />
         <div className="flex flex-1 flex-col overflow-hidden min-w-0">
           <Header />
           <main className="flex-1 overflow-y-auto p-4">
-            {activeMenu === "Order List" && <OrderList />}
-            {activeMenu === "Return List" && <ReturnList />}
+            {children}
           </main>
         </div>
       </div>
