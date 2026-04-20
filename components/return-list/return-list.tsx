@@ -40,7 +40,7 @@ import { returnRecords, type ReturnRecord } from "@/lib/mock-data"
 import { ReturnDetailModal } from "./return-detail-modal"
 
 type QuickDate = "today" | "week" | "month" | "3months"
-type SortField = "returnDate" | "returnNo" | "store" | "location" | "totalQty" | "totalAmount"
+type SortField = "returnDate" | "returnNo" | "store" | "totalQty" | "totalAmount"
 type SortDirection = "asc" | "desc"
 
 const BP_OPTIONS = [
@@ -257,7 +257,6 @@ export function ReturnList() {
           "Refund No.": record.returnNo,
           "Original Order": record.originalOrderNo,
           "Store": `${record.storeCode} / ${record.storeName}`,
-          "Location": `${record.locationCode} / ${record.locationName}`,
           "Currency": record.currency,
           "Product Code": product.productCode,
           "Product Name": product.productName,
@@ -318,9 +317,6 @@ export function ReturnList() {
         break
       case "store":
         comparison = a.storeCode.localeCompare(b.storeCode)
-        break
-      case "location":
-        comparison = a.locationCode.localeCompare(b.locationCode)
         break
       case "totalAmount":
         comparison = getReturnTotal(a) - getReturnTotal(b)
@@ -521,16 +517,6 @@ export function ReturnList() {
                 </button>
                 <span className="text-[10px] text-muted-foreground">(Code / Name)</span>
               </TableHead>
-              <TableHead>
-                <button
-                  onClick={() => handleSort("location")}
-                  className="flex items-center w-full hover:text-primary transition-colors"
-                >
-                  Location
-                  {getSortIcon("location")}
-                </button>
-                <span className="text-[10px] text-muted-foreground">(Code / Name)</span>
-              </TableHead>
               <TableHead className="text-center">Currency</TableHead>
               <TableHead className="text-center">
                 <button
@@ -596,7 +582,6 @@ export function ReturnList() {
                   </TableCell>
                   <TableCell className="text-center text-[10px]">{record.originalOrderNo}</TableCell>
                   <TableCell className="text-[10px]">{record.storeCode} / {record.storeName}</TableCell>
-                  <TableCell className="text-[10px]">{record.locationCode} / {record.locationName}</TableCell>
                   <TableCell className="text-center text-[10px]">{record.currency}</TableCell>
                   <TableCell className="text-center text-[10px]">-{returnQty.toLocaleString()}</TableCell>
                   <TableCell className="text-right text-[10px] font-medium">{fmt(returnTotal)}</TableCell>

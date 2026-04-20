@@ -69,10 +69,6 @@ export function ReturnDetailModal({ returnRecord, open, onOpenChange }: ReturnDe
               <p className="text-[10px] font-medium mt-0.5">{returnRecord.storeCode} / {returnRecord.storeName}</p>
             </div>
             <div>
-              <p className="text-[9px] text-muted-foreground">Location</p>
-              <p className="text-[10px] font-medium mt-0.5">{returnRecord.locationCode} / {returnRecord.locationName}</p>
-            </div>
-            <div>
               <p className="text-[9px] text-muted-foreground">Currency</p>
               <p className="text-[10px] font-medium mt-0.5">{returnRecord.currency}</p>
             </div>
@@ -92,16 +88,18 @@ export function ReturnDetailModal({ returnRecord, open, onOpenChange }: ReturnDe
           <div className="border border-border rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <colgroup>
-                <col className="w-[40%]" />
-                <col className="w-[8%]" />
-                <col className="w-[13%]" />
-                <col className="w-[13%]" />
-                <col className="w-[13%]" />
-                <col className="w-[13%]" />
+                <col className="w-[32%]" />
+                <col className="w-[14%]" />
+                <col className="w-[7%]" />
+                <col className="w-[11%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
               </colgroup>
               <thead>
                 <tr className="bg-muted/50 h-8 text-[10px] text-foreground font-medium">
                   <th className="text-left pl-4 py-2">Product Info (Code / Name / Barcode)</th>
+                  <th className="text-left py-2">Location</th>
                   <th className="text-center py-2">Qty</th>
                   <th className="text-right py-2 pr-3">Unit Price</th>
                   <th className="text-right py-2 pr-3">Net Sales</th>
@@ -117,6 +115,7 @@ export function ReturnDetailModal({ returnRecord, open, onOpenChange }: ReturnDe
                   return (
                     <tr key={idx} className="h-7 border-t border-border">
                       <td className="text-[10px] pl-4 py-2">{product.productCode} / {product.productName}{product.barcode ? ` / ${product.barcode}` : ""}</td>
+                      <td className="text-[10px] py-2">{product.locationCode} / {product.locationName}</td>
                       <td className="text-[10px] text-center py-2">-{product.qty}</td>
                       <td className="text-[10px] text-right py-2 pr-3">{fmtRaw(product.unitPrice)}</td>
                       <td className="text-[10px] text-right py-2 pr-3">{fmt(itemNet)}</td>
@@ -129,6 +128,7 @@ export function ReturnDetailModal({ returnRecord, open, onOpenChange }: ReturnDe
               <tfoot>
                 <tr className="h-8 border-t border-border bg-muted/30">
                   <td className="text-[10px] font-bold pl-4 py-2">Total</td>
+                  <td className="py-2" />
                   <td className="text-[11px] font-extrabold text-center py-2 text-primary">-{totalQty.toLocaleString()}</td>
                   <td className="py-2" />
                   <td className="text-[11px] font-extrabold text-right py-2 pr-3 text-primary">{fmt(netSales)}</td>
