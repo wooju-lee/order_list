@@ -1,6 +1,6 @@
 "use client"
 
-import { ShoppingCart, Package } from "lucide-react"
+import { ShoppingCart, Package, Info } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
   Table,
@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import type { OrderRecord } from "@/lib/mock-data"
 
 interface OrderDetailModalProps {
@@ -40,7 +41,9 @@ export function OrderDetailModal({ order, open, onOpenChange }: OrderDetailModal
       ? v.toLocaleString()
       : v % 1 === 0 ? v.toLocaleString() : v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-  const totalQty = order.products.reduce((s, p) => s + p.qty, 0)
+  const isPackage = (code: string) => code.startsWith("99")
+  const totalQty = order.products.filter(p => !isPackage(p.productCode)).reduce((s, p) => s + p.qty, 0)
+  const totalCancelQty = order.products.filter(p => !isPackage(p.productCode)).reduce((s, p) => s + (p.cancelQty || 0), 0)
   const totalAmount = order.products.reduce((s, p) => s + p.qty * p.unitPrice, 0)
   const netSales = Math.round(totalAmount / 1.1 * 100) / 100
   const vat = Math.round((totalAmount - netSales) * 100) / 100
@@ -96,17 +99,19 @@ export function OrderDetailModal({ order, open, onOpenChange }: OrderDetailModal
           <div className="border border-border rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <colgroup>
-                <col className="w-[40%]" />
-                <col className="w-[8%]" />
-                <col className="w-[13%]" />
-                <col className="w-[13%]" />
-                <col className="w-[13%]" />
-                <col className="w-[13%]" />
+                <col className="w-[36%]" />
+                <col className="w-[7%]" />
+                <col className="w-[9%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
               </colgroup>
               <thead>
                 <tr className="bg-muted/50 h-8 text-[10px] text-foreground font-medium">
                   <th className="text-left pl-4 py-2">Product Info (Code / Name / Barcode)</th>
                   <th className="text-center py-2">Qty</th>
+                  <th className="text-center py-2">Cancel Qty</th>
                   <th className="text-right py-2 pr-3">Unit Price</th>
                   <th className="text-right py-2 pr-3">Net Sales</th>
                   <th className="text-right py-2 pr-3">VAT</th>
@@ -122,6 +127,7 @@ export function OrderDetailModal({ order, open, onOpenChange }: OrderDetailModal
                     <tr key={idx} className="h-7 border-t border-border">
                       <td className="text-[10px] pl-4 py-2">{product.productCode} / {product.productName}{product.barcode ? ` / ${product.barcode}` : ""}</td>
                       <td className="text-[10px] text-center py-2">{product.qty}</td>
+                      <td className="text-[10px] text-center py-2 text-foreground">{product.cancelQty ? `-${product.cancelQty}` : "-"}</td>
                       <td className="text-[10px] text-right py-2 pr-3">{fmt(product.unitPrice)}</td>
                       <td className="text-[10px] text-right py-2 pr-3">{fmt(itemNet)}</td>
                       <td className="text-[10px] text-right py-2 pr-3">{fmt(itemVat)}</td>
@@ -132,8 +138,21 @@ export function OrderDetailModal({ order, open, onOpenChange }: OrderDetailModal
               </tbody>
               <tfoot>
                 <tr className="h-8 border-t border-border bg-muted/30">
-                  <td className="text-[10px] font-bold pl-4 py-2">Total</td>
+                  <td className="text-[10px] font-bold pl-4 py-2">
+                    <span className="flex items-center gap-1">
+                      Total
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Total quantity excludes package items.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </span>
+                  </td>
                   <td className="text-[11px] font-extrabold text-center py-2 text-primary">{totalQty.toLocaleString()}</td>
+                  <td className="py-2" />
                   <td className="py-2" />
                   <td className="text-[11px] font-extrabold text-right py-2 pr-3 text-primary">{fmt(netSales)}</td>
                   <td className="text-[11px] font-extrabold text-right py-2 pr-3 text-primary">{fmt(vat)}</td>

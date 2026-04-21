@@ -3,6 +3,7 @@ export interface ProductLine {
   productName: string
   barcode: string
   qty: number
+  cancelQty?: number
   unitPrice: number
 }
 
@@ -89,7 +90,7 @@ export const orderRecords: OrderRecord[] = [
     locationName: "SALES",
     products: [
       { productCode: "11003121", productName: "EGO-01", barcode: "8809907773688", qty: 1, unitPrice: 210 },
-      { productCode: "11003123", productName: "ATOMIC-02", barcode: "8809549828968", qty: 2, unitPrice: 175 },
+      { productCode: "11003123", productName: "ATOMIC-02", barcode: "8809549828968", qty: 2, cancelQty: 1, unitPrice: 175 },
     ],
     customerName: "Emily Johnson",
     customerEmail: "emily.j@email.com",
@@ -138,7 +139,7 @@ export const orderRecords: OrderRecord[] = [
     locationCode: "1000",
     locationName: "SALES",
     products: [
-      { productCode: "11003135", productName: "ROB-01", barcode: "8809549829354", qty: 2, unitPrice: 220 },
+      { productCode: "11003135", productName: "ROB-01", barcode: "8809549829354", qty: 2, cancelQty: 1, unitPrice: 220 },
       { productCode: "11003137", productName: "ZIN-01", barcode: "8809549829392", qty: 1, unitPrice: 165 },
       { productCode: "11003140", productName: "ACADEMYA-02(BR)", barcode: "8809549828937", qty: 1, unitPrice: 199 },
       { productCode: "99000002", productName: "PACKAGE-PREMIUM", barcode: "", qty: 1, unitPrice: 25 },
@@ -217,7 +218,7 @@ export const orderRecords: OrderRecord[] = [
     locationCode: "1000",
     locationName: "SALES",
     products: [
-      { productCode: "11003147", productName: "EVAN-BRC13", barcode: "8809549829125", qty: 1, unitPrice: 205 },
+      { productCode: "11003147", productName: "EVAN-BRC13", barcode: "8809549829125", qty: 1, cancelQty: 1, unitPrice: 205 },
     ],
     customerName: "Jessica Davis",
     customerEmail: "j.davis@email.com",
@@ -241,9 +242,9 @@ export const orderRecords: OrderRecord[] = [
     locationCode: "1000",
     locationName: "SALES",
     products: [
-      { productCode: "11003102", productName: "ACADEMYA-02", barcode: "8809549828920", qty: 1, unitPrice: 189 },
-      { productCode: "21001005", productName: "CR-1.67 PRG HMC", barcode: "", qty: 2, unitPrice: 180 },
-      { productCode: "99000001", productName: "PACKAGE-STANDARD", barcode: "", qty: 1, unitPrice: 15 },
+      { productCode: "11003102", productName: "ACADEMYA-02", barcode: "8809549828920", qty: 1, cancelQty: 1, unitPrice: 189 },
+      { productCode: "21001005", productName: "CR-1.67 PRG HMC", barcode: "", qty: 2, cancelQty: 2, unitPrice: 180 },
+      { productCode: "99000001", productName: "PACKAGE-STANDARD", barcode: "", qty: 1, cancelQty: 1, unitPrice: 15 },
     ],
     customerName: "Robert Wilson",
     customerEmail: "r.wilson@email.com",
@@ -524,8 +525,8 @@ export const orderRecords: OrderRecord[] = [
     locationCode: "1000",
     locationName: "SALES",
     products: [
-      { productCode: "11003147", productName: "EVAN-BRC13", barcode: "8809549829125", qty: 1, unitPrice: 205 },
-      { productCode: "21001001", productName: "CR-1.60 SV UC", barcode: "", qty: 2, unitPrice: 85 },
+      { productCode: "11003147", productName: "EVAN-BRC13", barcode: "8809549829125", qty: 1, cancelQty: 1, unitPrice: 205 },
+      { productCode: "21001001", productName: "CR-1.60 SV UC", barcode: "", qty: 2, cancelQty: 2, unitPrice: 85 },
     ],
     customerName: "Akiko Nakamura",
     customerEmail: "a.nakamura@email.com",
@@ -652,8 +653,8 @@ export const orderRecords: OrderRecord[] = [
     locationCode: "1000",
     locationName: "SALES",
     products: [
-      { productCode: "11003102", productName: "ACADEMYA-02", barcode: "8809549828920", qty: 1, unitPrice: 189 },
-      { productCode: "99000001", productName: "PACKAGE-STANDARD", barcode: "", qty: 1, unitPrice: 15 },
+      { productCode: "11003102", productName: "ACADEMYA-02", barcode: "8809549828920", qty: 1, cancelQty: 1, unitPrice: 189 },
+      { productCode: "99000001", productName: "PACKAGE-STANDARD", barcode: "", qty: 1, cancelQty: 1, unitPrice: 15 },
     ],
     customerName: "Steven Hall",
     customerEmail: "s.hall@email.com",
@@ -822,6 +823,8 @@ export const orderRecords: OrderRecord[] = [
 ]
 
 export interface RefundProductLine extends ProductLine {
+  storeCode: string
+  storeName: string
   locationCode: string
   locationName: string
 }
@@ -858,7 +861,7 @@ export const returnRecords: ReturnRecord[] = [
     storeCode: "US1001",
     storeName: "US_STORE_01",
     products: [
-      { productCode: "11003146", productName: "EVAN-GC7", barcode: "8809549829118", qty: 1, unitPrice: 192, locationCode: "1000", locationName: "SALES" },
+      { productCode: "11003146", productName: "EVAN-GC7", barcode: "8809549829118", qty: 1, unitPrice: 192, storeCode: "US1001", storeName: "US_STORE_01", locationCode: "1000", locationName: "SALES" },
     ],
     customerName: "Lisa White",
     returnReason: "Defective Product",
@@ -879,7 +882,7 @@ export const returnRecords: ReturnRecord[] = [
     storeCode: "US1001",
     storeName: "US_STORE_01",
     products: [
-      { productCode: "21001001", productName: "CR-1.60 SV UC", barcode: "", qty: 1, unitPrice: 85, locationCode: "1000", locationName: "SALES" },
+      { productCode: "21001001", productName: "CR-1.60 SV UC", barcode: "", qty: 1, unitPrice: 85, storeCode: "US1001", storeName: "US_STORE_01", locationCode: "1000", locationName: "SALES" },
     ],
     customerName: "John Smith",
     returnReason: "Wrong Prescription",
@@ -900,8 +903,8 @@ export const returnRecords: ReturnRecord[] = [
     storeCode: "CA1001",
     storeName: "CA_STORE_01",
     products: [
-      { productCode: "11003135", productName: "ROB-01", barcode: "8809549829354", qty: 1, unitPrice: 220, locationCode: "1000", locationName: "SALES" },
-      { productCode: "99000002", productName: "PACKAGE-PREMIUM", barcode: "", qty: 1, unitPrice: 25, locationCode: "2000", locationName: "WAREHOUSE" },
+      { productCode: "11003135", productName: "ROB-01", barcode: "8809549829354", qty: 1, unitPrice: 220, storeCode: "CA1001", storeName: "CA_STORE_01", locationCode: "1000", locationName: "SALES" },
+      { productCode: "99000002", productName: "PACKAGE-PREMIUM", barcode: "", qty: 1, unitPrice: 25, storeCode: "CA1001", storeName: "CA_STORE_01", locationCode: "2000", locationName: "WAREHOUSE" },
     ],
     customerName: "Sarah Williams",
     returnReason: "Customer Changed Mind",
@@ -922,7 +925,7 @@ export const returnRecords: ReturnRecord[] = [
     storeCode: "JP1001",
     storeName: "JP_STORE_01",
     products: [
-      { productCode: "11003145", productName: "EVAN-KC1", barcode: "8809549829101", qty: 1, unitPrice: 178, locationCode: "1000", locationName: "SALES" },
+      { productCode: "11003145", productName: "EVAN-KC1", barcode: "8809549829101", qty: 1, unitPrice: 178, storeCode: "JP1001", storeName: "JP_STORE_01", locationCode: "1000", locationName: "SALES" },
     ],
     customerName: "Yuki Tanaka",
     returnReason: "Size Mismatch",
@@ -943,7 +946,7 @@ export const returnRecords: ReturnRecord[] = [
     storeCode: "US1001",
     storeName: "US_STORE_01",
     products: [
-      { productCode: "11003121", productName: "EGO-01", barcode: "8809907773688", qty: 1, unitPrice: 210, locationCode: "1000", locationName: "SALES" },
+      { productCode: "11003121", productName: "EGO-01", barcode: "8809907773688", qty: 1, unitPrice: 210, storeCode: "US1001", storeName: "US_STORE_01", locationCode: "1000", locationName: "SALES" },
     ],
     customerName: "Amanda Martinez",
     returnReason: "No Reason Provided",
@@ -964,8 +967,8 @@ export const returnRecords: ReturnRecord[] = [
     storeCode: "JP1002",
     storeName: "JP_STORE_02",
     products: [
-      { productCode: "11003135", productName: "ROB-01", barcode: "8809549829354", qty: 1, unitPrice: 220, locationCode: "1000", locationName: "SALES" },
-      { productCode: "11003137", productName: "ZIN-01", barcode: "8809549829392", qty: 1, unitPrice: 165, locationCode: "1000", locationName: "SALES" },
+      { productCode: "11003135", productName: "ROB-01", barcode: "8809549829354", qty: 1, unitPrice: 220, storeCode: "JP1002", storeName: "JP_STORE_02", locationCode: "1000", locationName: "SALES" },
+      { productCode: "11003137", productName: "ZIN-01", barcode: "8809549829392", qty: 1, unitPrice: 165, storeCode: "JP1002", storeName: "JP_STORE_02", locationCode: "1000", locationName: "SALES" },
     ],
     customerName: "Kenji Yamamoto",
     returnReason: "Defective Product",
@@ -986,7 +989,7 @@ export const returnRecords: ReturnRecord[] = [
     storeCode: "CA1001",
     storeName: "CA_STORE_01",
     products: [
-      { productCode: "11003147", productName: "EVAN-BRC13", barcode: "8809549829125", qty: 1, unitPrice: 205, locationCode: "2000", locationName: "WAREHOUSE" },
+      { productCode: "11003147", productName: "EVAN-BRC13", barcode: "8809549829125", qty: 1, unitPrice: 205, storeCode: "CA1001", storeName: "CA_STORE_01", locationCode: "2000", locationName: "WAREHOUSE" },
     ],
     customerName: "Jennifer Taylor",
     returnReason: "Wrong Item Delivered",
@@ -1007,7 +1010,7 @@ export const returnRecords: ReturnRecord[] = [
     storeCode: "US1004",
     storeName: "US_ONLINE",
     products: [
-      { productCode: "11003135", productName: "ROB-01", barcode: "8809549829354", qty: 1, unitPrice: 220, locationCode: "2000", locationName: "WAREHOUSE" },
+      { productCode: "11003135", productName: "ROB-01", barcode: "8809549829354", qty: 1, unitPrice: 220, storeCode: "US1004", storeName: "US_ONLINE", locationCode: "2000", locationName: "WAREHOUSE" },
     ],
     customerName: "Karen Clark",
     returnReason: "Defective Product",
@@ -1028,8 +1031,8 @@ export const returnRecords: ReturnRecord[] = [
     storeCode: "US1001",
     storeName: "US_STORE_01",
     products: [
-      { productCode: "11003140", productName: "ACADEMYA-02(BR)", barcode: "8809549828937", qty: 1, unitPrice: 199, locationCode: "1000", locationName: "SALES" },
-      { productCode: "99000002", productName: "PACKAGE-PREMIUM", barcode: "", qty: 1, unitPrice: 25, locationCode: "2000", locationName: "WAREHOUSE" },
+      { productCode: "11003140", productName: "ACADEMYA-02(BR)", barcode: "8809549828937", qty: 1, unitPrice: 199, storeCode: "US1001", storeName: "US_STORE_01", locationCode: "1000", locationName: "SALES" },
+      { productCode: "99000002", productName: "PACKAGE-PREMIUM", barcode: "", qty: 1, unitPrice: 25, storeCode: "US1002", storeName: "US_STORE_02", locationCode: "2000", locationName: "WAREHOUSE" },
     ],
     customerName: "James Robinson",
     returnReason: "Customer Changed Mind",
@@ -1050,7 +1053,7 @@ export const returnRecords: ReturnRecord[] = [
     storeCode: "CA1002",
     storeName: "CA_STORE_02",
     products: [
-      { productCode: "11003140", productName: "ACADEMYA-02(BR)", barcode: "8809549828937", qty: 1, unitPrice: 199, locationCode: "1000", locationName: "SALES" },
+      { productCode: "11003140", productName: "ACADEMYA-02(BR)", barcode: "8809549828937", qty: 1, unitPrice: 199, storeCode: "CA1002", storeName: "CA_STORE_02", locationCode: "1000", locationName: "SALES" },
     ],
     customerName: "Michelle Allen",
     returnReason: "Wrong Prescription",
@@ -1071,7 +1074,7 @@ export const returnRecords: ReturnRecord[] = [
     storeCode: "CA1001",
     storeName: "CA_STORE_01",
     products: [
-      { productCode: "11003146", productName: "EVAN-GC7", barcode: "8809549829118", qty: 1, unitPrice: 192, locationCode: "1000", locationName: "SALES" },
+      { productCode: "11003146", productName: "EVAN-GC7", barcode: "8809549829118", qty: 1, unitPrice: 192, storeCode: "CA1001", storeName: "CA_STORE_01", locationCode: "1000", locationName: "SALES" },
     ],
     customerName: "Mark Thompson",
     returnReason: "Size Mismatch",
@@ -1092,7 +1095,7 @@ export const returnRecords: ReturnRecord[] = [
     storeCode: "JP1002",
     storeName: "JP_STORE_02",
     products: [
-      { productCode: "11003144", productName: "EVAN-01", barcode: "8809549829095", qty: 1, unitPrice: 185, locationCode: "1000", locationName: "SALES" },
+      { productCode: "11003144", productName: "EVAN-01", barcode: "8809549829095", qty: 1, unitPrice: 185, storeCode: "JP1002", storeName: "JP_STORE_02", locationCode: "1000", locationName: "SALES" },
     ],
     customerName: "Takeshi Ito",
     returnReason: "No Reason Provided",
